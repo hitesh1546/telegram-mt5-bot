@@ -1,0 +1,6 @@
+.env
+tg_session.session
+tg_session.session-journal
+trades.log
+__pycache__/
+*.pyc

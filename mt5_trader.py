@@ -9,7 +9,7 @@ except ImportError:
 
 import config
 from logger import get_logger, log_section
-from risk_manager import calculate_lot
+from risk_manager import calculate_lot, _is_gold
 
 logger = get_logger()
 
@@ -28,11 +28,14 @@ def initialize_mt5(retries: int = 3) -> bool:
 
     for attempt in range(1, retries + 1):
         logger.info(f"MT5 init attempt {attempt}/{retries}...")
-        if mt5.initialize(
+        init_kwargs = dict(
             login=config.MT5_ACCOUNT,
             password=config.MT5_PASSWORD,
             server=config.MT5_SERVER,
-        ):
+        )
+        if config.MT5_PATH:
+            init_kwargs["path"] = config.MT5_PATH
+        if mt5.initialize(**init_kwargs):
             info = mt5.account_info()
             if info:
                 logger.info(
@@ -162,16 +165,29 @@ def place_trade(signal: dict) -> tuple:
     volume_step = sym_info.volume_step
     volume_min = sym_info.volume_min
 
+    price = get_price(symbol, action)
+    if price is None:
+        return False, 0, [], 0.0
+
+    # Signal omitted SL/TP (e.g. a teaser message) — default to a $ gap around
+    # live price instead of sending an unprotected order to the broker.
+    if sl is None and _is_gold(symbol):
+        gap = config.DEFAULT_SL_TP_GAP
+        sl = price + gap if action == "SELL" else price - gap
+        entry = price
+        logger.warning(f"No SL in signal for {symbol} — defaulting to ${gap} gap from live price: SL={sl}")
+
+    if not tp_list and _is_gold(symbol):
+        gap = config.DEFAULT_SL_TP_GAP
+        tp_list = [price - gap if action == "SELL" else price + gap]
+        logger.warning(f"No TP in signal for {symbol} — defaulting to ${gap} gap from live price: TP={tp_list}")
+
     balance = info.balance
     total_lot = calculate_lot(symbol, entry, sl, config.RISK_PERCENT, balance)
 
     num_orders = max(len(tp_list), 1)
     raw_lot_each = total_lot / num_orders
     lot_each = max(volume_min, round(raw_lot_each - (raw_lot_each % volume_step), 2))
-
-    price = get_price(symbol, action)
-    if price is None:
-        return False, 0, [], 0.0
 
     sl_price = round(float(sl), digits) if sl else 0.0
     order_type = mt5.ORDER_TYPE_BUY if action == "BUY" else mt5.ORDER_TYPE_SELL

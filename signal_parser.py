@@ -15,6 +15,7 @@ _RE_HEADER = re.compile(
 )
 _RE_TP = re.compile(r"\bTP[.\s]*([\d.]+)", re.IGNORECASE)
 _RE_SL = re.compile(r"\bSL?[.\s]*([\d.]+)", re.IGNORECASE)
+_RE_ENTRY2 = re.compile(r"\bMORE\s+(?:BUY|SELL)[.\s]*([\d.]+)", re.IGNORECASE)
 
 # Phrases that mark a result/update message — not a new signal
 _IGNORE_PHRASES = (
@@ -70,10 +71,14 @@ def parse_signal(raw_message: str) -> Optional[dict]:
     sl_match = _RE_SL.search(text)
     sl = float(sl_match.group(1)) if sl_match else None
 
+    entry2_match = _RE_ENTRY2.search(text)
+    entry2 = float(entry2_match.group(1)) if entry2_match else None
+
     signal = {
         "symbol": symbol,
         "action": action,
         "entry": entry,
+        "entry2": entry2,
         "sl": sl,
         "tp": tps if tps else None,
         "is_signal": True,

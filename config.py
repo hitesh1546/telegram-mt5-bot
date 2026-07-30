@@ -31,10 +31,12 @@ CHANNEL_TEST = "https://t.me/brijesh_forex"  # test / paper-trade channel
 MT5_ACCOUNT: int = int(_require("MT5_ACCOUNT"))
 MT5_PASSWORD: str = _require("MT5_PASSWORD")
 MT5_SERVER: str = _require("MT5_SERVER")
+MT5_PATH: str = os.getenv("MT5_PATH", "")  # path to terminal64.exe — required when running multiple terminals concurrently
 
 # Risk
 RISK_PERCENT: float = _float("RISK_PERCENT", 1.0)
 DEFAULT_LOT: float = _float("DEFAULT_LOT", 0.1)
+DEFAULT_SL_TP_GAP: float = _float("DEFAULT_SL_TP_GAP", 10.0)  # $ price gap for SL/TP on gold when signal omits them
 
 # Mode
 DRY_RUN: bool = _bool("DRY_RUN", False)

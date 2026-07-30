@@ -44,7 +44,16 @@ async def handle_message(event: events.NewMessage.Event) -> None:
             logger.warning("CLOSE signal has no symbol — skipping.")
 
     elif action in ("BUY", "SELL"):
-        # 5 market orders (one per TP) + breakeven monitor
+        # If a second ("MORE") entry is present, average the two entries into
+        # a single trade with only 2 TP orders instead of trading each entry separately.
+        entry2 = signal.get("entry2")
+        if entry2 is not None:
+            entry1 = signal.get("entry")
+            avg_entry = (entry1 + entry2) / 2 if entry1 is not None else entry2
+            tp_list = signal.get("tp") or []
+            signal = {**signal, "entry": avg_entry, "tp": tp_list[:2] or None}
+
+        # Market orders (one per TP) + breakeven monitor
         success, magic, tickets, entry = place_trade(signal)
         if success and tickets:
             track_signal(magic, entry, tickets)

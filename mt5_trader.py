@@ -169,9 +169,12 @@ def place_trade(signal: dict) -> tuple:
     if price is None:
         return False, 0, [], 0.0
 
+    no_sl = signal.get("no_sl", False)
+
     # Signal omitted SL/TP (e.g. a teaser message) — default to a $ gap around
     # live price instead of sending an unprotected order to the broker.
-    if sl is None and _is_gold(symbol):
+    # Skipped when no_sl is explicitly set (e.g. TP-only averaged-entry trades).
+    if sl is None and _is_gold(symbol) and not no_sl:
         gap = config.DEFAULT_SL_TP_GAP
         sl = price + gap if action == "SELL" else price - gap
         entry = price

@@ -76,11 +76,15 @@ def get_price(symbol: str, action: str, retries: int = 5) -> Optional[float]:
 
 
 def _get_filling_mode(sym_info) -> int:
-    """Pick a filling mode the symbol actually supports (brokers vary)."""
+    """Pick a filling mode the symbol actually supports (brokers vary).
+    symbol_info().filling_mode is a bitmask; the MetaTrader5 python module doesn't
+    expose the SYMBOL_FILLING_* bit constants, so the raw values are used directly:
+    bit 0 (1) = FOK supported, bit 1 (2) = IOC supported.
+    """
     mode = sym_info.filling_mode
-    if mode & mt5.SYMBOL_FILLING_FOK:
+    if mode & 1:
         return mt5.ORDER_FILLING_FOK
-    if mode & mt5.SYMBOL_FILLING_IOC:
+    if mode & 2:
         return mt5.ORDER_FILLING_IOC
     return mt5.ORDER_FILLING_RETURN
 

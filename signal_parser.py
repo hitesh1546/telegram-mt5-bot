@@ -37,6 +37,24 @@ def _is_result_update(text: str) -> bool:
     return any(phrase in upper for phrase in _IGNORE_PHRASES)
 
 
+def _filter_tps(entry: float, action: str, tps: list) -> list:
+    """
+    Drop TPs that are on the wrong side of entry or break the expected
+    monotonic sequence (BUY: ascending above entry, SELL: descending below
+    entry) — catches typos like a stray digit turning 4402 into 4202.
+    """
+    clean = []
+    last = entry
+    for tp in tps:
+        in_sequence = (tp > last) if action == "BUY" else (tp < last)
+        if in_sequence:
+            clean.append(tp)
+            last = tp
+        else:
+            logger.warning(f"Dropping out-of-sequence TP {tp} (action={action}, entry={entry})")
+    return clean
+
+
 def parse_signal(raw_message: str) -> Optional[dict]:
     """
     Parse a raw Telegram message using regex.
@@ -68,6 +86,7 @@ def parse_signal(raw_message: str) -> Optional[dict]:
     entry = float(header.group(3))
 
     tps = [float(m) for m in _RE_TP.findall(text)]
+    tps = _filter_tps(entry, action, tps)
     sl_match = _RE_SL.search(text)
     sl = float(sl_match.group(1)) if sl_match else None
 

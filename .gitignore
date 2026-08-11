@@ -1,6 +1,8 @@
 .env
 tg_session.session
 tg_session.session-journal
+test_session.session
+test_session.session-journal
 trades.log
 __pycache__/
 *.pyc

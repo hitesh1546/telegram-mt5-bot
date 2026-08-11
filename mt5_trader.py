@@ -57,15 +57,32 @@ def get_account_info() -> Optional[object]:
     return mt5.account_info()
 
 
-def get_price(symbol: str, action: str) -> Optional[float]:
-    """Return ask price for BUY, bid for SELL."""
+def get_price(symbol: str, action: str, retries: int = 5) -> Optional[float]:
+    """Return ask price for BUY, bid for SELL. Retries briefly if quotes haven't started streaming yet."""
     if not _check_mt5():
         return None
-    tick = mt5.symbol_info_tick(symbol)
-    if tick is None:
-        logger.error(f"Cannot get tick for {symbol}: {mt5.last_error()}")
-        return None
-    return tick.ask if action.upper() == "BUY" else tick.bid
+    for attempt in range(1, retries + 1):
+        tick = mt5.symbol_info_tick(symbol)
+        if tick is None:
+            logger.error(f"Cannot get tick for {symbol}: {mt5.last_error()}")
+            return None
+        price = tick.ask if action.upper() == "BUY" else tick.bid
+        if price:
+            return price
+        logger.warning(f"Tick price for {symbol} is 0 (attempt {attempt}/{retries}) — retrying...")
+        time.sleep(0.5)
+    logger.error(f"No valid tick price for {symbol} after {retries} attempts.")
+    return None
+
+
+def _get_filling_mode(sym_info) -> int:
+    """Pick a filling mode the symbol actually supports (brokers vary)."""
+    mode = sym_info.filling_mode
+    if mode & mt5.SYMBOL_FILLING_FOK:
+        return mt5.ORDER_FILLING_FOK
+    if mode & mt5.SYMBOL_FILLING_IOC:
+        return mt5.ORDER_FILLING_IOC
+    return mt5.ORDER_FILLING_RETURN
 
 
 def get_open_positions(symbol: Optional[str] = None) -> list:
@@ -217,6 +234,8 @@ def place_trade(signal: dict) -> tuple:
         logger.info("[DRY RUN] Orders not sent to MT5.")
         return True, magic, [], price
 
+    filling_mode = _get_filling_mode(sym_info)
+
     tickets = []
     for i, tp in enumerate(orders):
         tp_price = round(float(tp), digits) if tp is not None else 0.0
@@ -232,7 +251,7 @@ def place_trade(signal: dict) -> tuple:
             "magic": magic,
             "comment": f"TG-TP{i + 1}",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
+            "type_filling": filling_mode,
         }
         ticket = _send_order(request, f"Order {i + 1}/{num_orders} TP={tp_price}")
         if ticket:
@@ -257,6 +276,8 @@ def close_trade(symbol: str) -> bool:
     for pos in positions:
         close_type = mt5.ORDER_TYPE_SELL if pos.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY
         price = get_price(symbol, "SELL" if close_type == mt5.ORDER_TYPE_SELL else "BUY")
+        sym_info = mt5.symbol_info(symbol)
+        filling_mode = _get_filling_mode(sym_info) if sym_info else mt5.ORDER_FILLING_RETURN
 
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
@@ -269,7 +290,7 @@ def close_trade(symbol: str) -> bool:
             "magic": pos.magic,
             "comment": "TG-Close",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
+            "type_filling": filling_mode,
         }
 
         if config.DRY_RUN:

@@ -9,7 +9,6 @@ Automatically monitors a Telegram channel for forex/gold trading signals and exe
 - Places **one market order per TP level** (e.g. 5 TPs = 5 orders)
 - **Second-entry averaging** — a "MORE BUY/SELL" scale-in line is averaged into the primary entry and traded as a single order using only the first 2 TPs, instead of two separate trades
 - **Default SL/TP safety net** — if a gold signal omits SL/TP (e.g. a teaser message), the bot defaults to a `$10` price gap around live price instead of sending an unprotected order
-- **Breakeven SL monitor** — after 2 TPs hit, remaining orders' SL moves to entry automatically
 - Risk-based lot sizing (% of account balance)
 - **Multi-terminal support** — point a bot instance at a specific MT5 terminal executable via `MT5_PATH`, so multiple bots/accounts can run concurrently without fighting over the same terminal login
 - **DRY_RUN mode** — logs everything without sending real orders (safe for testing)
@@ -102,12 +101,6 @@ Telegram signal received
 Regex parser extracts: symbol, action, entry, SL, TPs
         ↓
 N market orders placed (one per TP), shared SL, unique magic number
-        ↓
-Background monitor polls every 10 seconds
-        ↓
-2+ TPs hit → remaining orders' SL moved to entry (breakeven, no loss)
-        ↓
-All orders closed → signal group removed from tracker
 ```
 
 ## Project Structure
@@ -118,9 +111,8 @@ telegram_mt5/
 ├── config.py             # Environment variable loading & validation
 ├── telegram_listener.py  # Telethon channel monitor & signal routing
 ├── signal_parser.py      # Regex-based signal parser
-├── mt5_trader.py         # MT5 order placement, breakeven SL, close trade
+├── mt5_trader.py         # MT5 order placement, close trade
 ├── risk_manager.py       # Lot size calculation based on risk %
-├── position_monitor.py   # Background breakeven SL monitor loop
 ├── logger.py             # Dual console + file logger
 ├── requirements.txt      # Dependencies
 └── .env                  # Credentials (not committed)
@@ -161,7 +153,6 @@ Use **Task Scheduler** to auto-start on boot:
 ## Notes
 
 - MT5 terminal must be **open and logged in** before running the bot
-- The bot does **not** close trades — only manages SL after TP hits
 - `tg_session.session` is created after first login — keep it safe, do not share
 - `.env` is excluded from git — never commit your credentials
 

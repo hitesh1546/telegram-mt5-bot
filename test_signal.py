@@ -20,7 +20,6 @@ from telethon.tl.types import PeerChannel
 import config
 from signal_parser import parse_signal
 from mt5_trader import initialize_mt5, place_trade
-from position_monitor import track_signal
 
 TEST_SESSION = "test_session"
 
@@ -101,8 +100,6 @@ def main() -> None:
 
     success, magic, tickets, entry = place_trade(signal)
     print(f"\n--- Result ---\nsuccess={success}, magic={magic}, tickets={tickets}, entry={entry}")
-    if success and tickets:
-        track_signal(magic, entry, tickets)
 
 
 if __name__ == "__main__":

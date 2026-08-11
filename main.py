@@ -5,7 +5,6 @@ import config
 from logger import get_logger
 from mt5_trader import initialize_mt5, get_account_info
 from telegram_listener import start_listener
-from position_monitor import monitor_loop
 
 logger = get_logger()
 
@@ -50,11 +49,7 @@ async def main() -> None:
     print_startup_summary(account_info)
 
     try:
-        # Run Telegram listener and breakeven monitor concurrently
-        await asyncio.gather(
-            start_listener(),
-            monitor_loop(),
-        )
+        await start_listener()
     except KeyboardInterrupt:
         logger.info("Shutdown requested — exiting gracefully.")
     except Exception as exc:

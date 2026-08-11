@@ -7,7 +7,6 @@ import config
 from logger import get_logger
 from signal_parser import parse_signal
 from mt5_trader import place_trade, close_trade
-from position_monitor import track_signal
 
 logger = get_logger()
 
@@ -54,10 +53,8 @@ async def handle_message(event: events.NewMessage.Event) -> None:
             # No SL on the averaged-entry trade — TP-only, closed manually if it goes against us.
             signal = {**signal, "entry": avg_entry, "tp": tp_list[:2] or None, "sl": None, "no_sl": True}
 
-        # Market orders (one per TP) + breakeven monitor
-        success, magic, tickets, entry = place_trade(signal)
-        if success and tickets:
-            track_signal(magic, entry, tickets)
+        # Market orders (one per TP)
+        place_trade(signal)
 
     else:
         logger.warning(f"Unknown action '{action}' — skipping.")

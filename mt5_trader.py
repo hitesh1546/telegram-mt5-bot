@@ -97,44 +97,6 @@ def get_open_positions(symbol: Optional[str] = None) -> list:
     return list(positions) if positions else []
 
 
-def move_sl_to_breakeven(tickets: list, entry: float) -> None:
-    """Move SL to entry price (breakeven) for all still-open positions in tickets."""
-    if not _check_mt5():
-        return
-
-    for ticket in tickets:
-        positions = mt5.positions_get(ticket=ticket)
-        if not positions:
-            continue  # already closed
-
-        pos = positions[0]
-        sym_info = mt5.symbol_info(pos.symbol)
-        digits = sym_info.digits if sym_info else 2
-        be_price = round(entry, digits)
-
-        if abs(pos.sl - be_price) < 10 ** -digits:
-            continue  # SL already at breakeven
-
-        request = {
-            "action": mt5.TRADE_ACTION_SLTP,
-            "position": ticket,
-            "sl": be_price,
-            "tp": pos.tp,
-        }
-
-        if config.DRY_RUN:
-            logger.info(f"[DRY RUN] Would move SL to breakeven {be_price} for ticket {ticket}")
-            continue
-
-        result = mt5.order_send(request)
-        if result and result.retcode == mt5.TRADE_RETCODE_DONE:
-            logger.info(f"Breakeven SL set to {be_price} for ticket {ticket}")
-        else:
-            retcode = result.retcode if result else "None"
-            comment = result.comment if result else mt5.last_error()
-            logger.error(f"Failed to set breakeven for ticket {ticket}: retcode={retcode}, {comment}")
-
-
 def _send_order(request: dict, label: str) -> Optional[int]:
     """Send a single order and return ticket number on success, None on failure."""
     result = mt5.order_send(request)

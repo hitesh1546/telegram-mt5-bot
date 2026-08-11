@@ -190,16 +190,9 @@ def place_trade(signal: dict) -> tuple:
     if price is None:
         return False, 0, [], 0.0
 
-    no_sl = signal.get("no_sl", False)
-
-    # Signal omitted SL/TP (e.g. a teaser message) — default to a $ gap around
-    # live price instead of sending an unprotected order to the broker.
-    # Skipped when no_sl is explicitly set (e.g. TP-only averaged-entry trades).
-    if sl is None and _is_gold(symbol) and not no_sl:
-        gap = config.DEFAULT_SL_TP_GAP
-        sl = price + gap if action == "SELL" else price - gap
-        entry = price
-        logger.warning(f"No SL in signal for {symbol} — defaulting to ${gap} gap from live price: SL={sl}")
+    # TP-only strategy — SL is never sent to MT5, regardless of what the signal specified.
+    # A synthetic SL distance is still used below purely to size the lot via risk %.
+    sl = None
 
     if not tp_list and _is_gold(symbol):
         gap = config.DEFAULT_SL_TP_GAP
@@ -213,7 +206,7 @@ def place_trade(signal: dict) -> tuple:
     raw_lot_each = total_lot / num_orders
     lot_each = max(volume_min, round(raw_lot_each - (raw_lot_each % volume_step), 2))
 
-    sl_price = round(float(sl), digits) if sl else 0.0
+    sl_price = 0.0
     order_type = mt5.ORDER_TYPE_BUY if action == "BUY" else mt5.ORDER_TYPE_SELL
     magic = int(time.time()) % 99_999_999
     orders = tp_list if tp_list else [None]

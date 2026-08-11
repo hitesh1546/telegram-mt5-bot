@@ -51,8 +51,7 @@ async def handle_message(event: events.NewMessage.Event) -> None:
             entry1 = signal.get("entry")
             avg_entry = (entry1 + entry2) / 2 if entry1 is not None else entry2
             tp_list = signal.get("tp") or []
-            # No SL on the averaged-entry trade — TP-only, closed manually if it goes against us.
-            signal = {**signal, "entry": avg_entry, "tp": tp_list[:2] or None, "sl": None, "no_sl": True}
+            signal = {**signal, "entry": avg_entry, "tp": tp_list[:2] or None}
 
         # Market orders (one per TP) + breakeven monitor
         success, magic, tickets, entry = place_trade(signal)

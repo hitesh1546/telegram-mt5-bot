@@ -53,7 +53,7 @@ def _apply_more_entry_averaging(signal: dict) -> dict:
     entry1 = signal.get("entry")
     avg_entry = (entry1 + entry2) / 2 if entry1 is not None else entry2
     tp_list = signal.get("tp") or []
-    return {**signal, "entry": avg_entry, "tp": tp_list[:2] or None, "sl": None, "no_sl": True}
+    return {**signal, "entry": avg_entry, "tp": tp_list[:2] or None}
 
 
 def main() -> None:

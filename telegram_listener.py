@@ -1,7 +1,7 @@
 import asyncio
 
 from telethon import TelegramClient, events
-from telethon.tl.types import Message
+from telethon.tl.types import Message, PeerChannel
 
 import config
 from logger import get_logger
@@ -69,17 +69,19 @@ async def start_listener() -> None:
     await client.start()
     logger.info("Telegram client started.")
 
+    channel_ref = PeerChannel(config.TELEGRAM_CHANNEL_ID) if config.TELEGRAM_CHANNEL_ID else config.TELEGRAM_CHANNEL
+
     try:
-        channel = await client.get_entity(config.TELEGRAM_CHANNEL)
+        channel = await client.get_entity(channel_ref)
         title = getattr(channel, "title", config.TELEGRAM_CHANNEL)
         mode_tag = (
             "[TEST]" if config.TELEGRAM_CHANNEL == config.CHANNEL_TEST
             else "[LIVE]" if config.TELEGRAM_CHANNEL == config.CHANNEL_LIVE
             else ""
         )
-        logger.info(f"Monitoring channel {mode_tag}: {title} ({config.TELEGRAM_CHANNEL})")
+        logger.info(f"Monitoring channel {mode_tag}: {title} (id={channel.id})")
     except Exception as exc:
-        logger.error(f"Failed to resolve channel '{config.TELEGRAM_CHANNEL}': {exc}")
+        logger.error(f"Failed to resolve channel '{channel_ref}': {exc}")
         raise
 
     @client.on(events.NewMessage(chats=channel))

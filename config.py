@@ -22,6 +22,11 @@ def _bool(key: str, default: bool = False) -> bool:
 TELEGRAM_API_ID: int = int(_require("TELEGRAM_API_ID"))
 TELEGRAM_API_HASH: str = _require("TELEGRAM_API_HASH")
 TELEGRAM_CHANNEL: str = _require("TELEGRAM_CHANNEL")  # set in .env — live or test
+# Stable numeric channel ID (survives username changes). Takes priority over
+# TELEGRAM_CHANNEL when set. From a web.telegram.org URL like .../#-1001610937993,
+# strip the leading "-100" to get this value.
+_channel_id_raw = os.getenv("TELEGRAM_CHANNEL_ID", "")
+TELEGRAM_CHANNEL_ID: int | None = int(_channel_id_raw) if _channel_id_raw else None
 
 # Known channels (for reference / quick switching in .env)
 CHANNEL_LIVE = "https://t.me/golLdsr"       # live signal source
